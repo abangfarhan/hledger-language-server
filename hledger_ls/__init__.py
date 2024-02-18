@@ -9,16 +9,24 @@ from lsprotocol.types import (
 import subprocess
 
 server = LanguageServer('hledger-language-server', 'v0.1')
+items_cache = []
 
 @server.feature(TEXT_DOCUMENT_COMPLETION)
 def completions(params: CompletionParams):
     """Returns completion items."""
-    output = (subprocess
-              .check_output(['hledger', 'accounts'])
-              .decode()
-              .strip())
-    lst = output.split('\r\n')
-    items = [CompletionItem(label=x) for x in lst]
+    global items_cache
+
+    try:
+        output = (subprocess
+                  .check_output(['hledger', 'accounts'])
+                  .decode()
+                  .strip())
+        lst = output.splitlines()
+        items = [CompletionItem(label=x) for x in lst]
+        items_cache = items
+    except subprocess.CalledProcessError:
+        items = items_cache
+
     return CompletionList(
         is_incomplete=False,
         items=items,
